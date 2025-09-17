@@ -1,5 +1,6 @@
 use chrono::prelude::*;
 use std::{fs::File, io::Write, path::Path, process::Command};
+use pathdiff::diff_paths;
 
 // user input name -> path to dir -> markdown file
 pub fn create_post(post_name: &str, output_dir_path: &Path) -> () {
@@ -28,16 +29,16 @@ pub fn create_post(post_name: &str, output_dir_path: &Path) -> () {
 pub fn render_post(
     md_path: &Path,
     output_path: &Path,
-    css_path_rel_to_output: Option<&Path>,
+    css_path: Option<&Path>,
     header_path: Option<&Path>,
     footer_path: Option<&Path>,
 ) -> () {
     let mut c = Command::new("pandoc");
     c.arg(md_path).arg("-s");
 
-    if let Some(css_path) = css_path_rel_to_output {
+    if let Some(css_path) = css_path {
         c.arg("-c");
-        c.arg(css_path);
+        c.arg(diff_paths(css_path, output_path.parent().unwrap()).unwrap());
     }
     if let Some(header_path) = header_path {
         c.arg("-B");
