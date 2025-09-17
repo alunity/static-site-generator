@@ -10,7 +10,7 @@
             - header.html
             - footer.html
             - feed_post.html
-                - Object which shows the html style for one post on feed.html
+                - component which shows the html style for one post on feed.html
         - posts
             - [your_posts].md
             - attachments
@@ -51,6 +51,6 @@
 2. Replace tags
     - md to html is a prerequesite since <FEED> requires html
 
-# Tests
-
-Let's not worry about that for now
+# Current limitations of design and implementation in the name of progress
+- components must be in the components folder and can be selected by name only, no nesting or path things
+- no tests 😥
