@@ -54,3 +54,5 @@
 # Current limitations of design and implementation in the name of progress
 - components must be in the components folder and can be selected by name only, no nesting or path things
 - no tests 😥
+- Any kind of good rust practices
+    - Error handling improve one day pls
