@@ -26,7 +26,7 @@ pub fn create_post(post_name: &str, output_dir_path: &Path) -> () {
     writeln!(&mut file, "---").unwrap();
 }
 
-pub fn render_post(
+pub fn render_to_html(
     md_path: &Path,
     output_path: &Path,
     css_path: Option<&Path>,

@@ -33,8 +33,6 @@ pub fn create_project(dir: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
     create_dir(posts_path.join("attachments"))?;
 
     Ok(())
-
-    // let component_path...
 }
 
 const DEFAULT_INDEX: &str = r#"<!doctype html>
@@ -45,11 +43,11 @@ const DEFAULT_INDEX: &str = r#"<!doctype html>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <REPLACE with="header" />
+    <REPLACE with="header.html" />
 
     <h1>Hello</h1>
 
-    <REPLACE with="footer" />
+    <REPLACE with="footer.html" />
   </body>
 </html>
 "#;

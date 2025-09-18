@@ -26,10 +26,14 @@
 
 - Let's not do path here to avoid doing annoying path handling rn TODO
 - This means you can't organise components into directories for now, but that's fine
+```html
 <REPLACE with="named_component"/>
+```
 - Replace with component
 
+```html
 <FEED with="posts_component">
+```
 - bespoke tag to be used exclusively for the posts feed type behaviour
 - will take the component and spawn an instance of it for every post
 - components will have special tags specifying where information should go
