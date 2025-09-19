@@ -1,8 +1,10 @@
 use std::{
-    error::Error, fs::{create_dir, read_dir, write}, path::Path
+    error::Error,
+    fs::{create_dir, read_dir, write},
+    path::Path,
 };
 
-use crate::markdown::create_post;
+use crate::{config::Config, markdown::create_post};
 
 pub fn create_project(dir: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
     let dir = dir.as_ref();
@@ -11,8 +13,16 @@ pub fn create_project(dir: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
         return Err(std::io::Error::new(
             std::io::ErrorKind::AlreadyExists,
             format!("project directory '{}' is not empty", dir.display()),
-        ).into());
+        )
+        .into());
     }
+
+    // write!(dir.join("config.json"), Config::default());
+    //
+    write(
+        dir.join("config.json"),
+        serde_json::to_string(&Config::default()).unwrap(),
+    )?;
 
     let src_path = dir.join("src");
     create_dir(&src_path)?;
@@ -56,6 +66,6 @@ const DEFAULT_CSS: &str = "/* Add your styles */\n";
 
 const DEFAULT_FEED: &str = "<!-- feed placeholder -->\n";
 
-const DEFAULT_HEADER: &str = "header\n";
-const DEFAULT_FOOTER: &str = "footer\n";
+const DEFAULT_HEADER: &str = "<div>header</div>\n";
+const DEFAULT_FOOTER: &str = "<div>footer</div>\n";
 const DEFAULT_FEED_POST: &str = "wip\n";

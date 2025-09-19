@@ -28,15 +28,16 @@ pub fn generate_substituted_html(src: &Path, dest: &Path, components_dir: &Path)
     write(dest, contents).unwrap();
 }
 
-fn substitute_replace(contents: &str, components_dir: &Path) -> String{
+fn substitute_replace(contents: &str, components_dir: &Path) -> String {
     let re = Regex::new(r#"<REPLACE\b[^>]*\bwith="([^"]*)"[^>]*/?>"#).unwrap();
 
-    re.replace_all(contents, |caps: &regex::Captures|{
+    re.replace_all(contents, |caps: &regex::Captures| {
         let with = caps.get(1).unwrap().as_str();
         let path = components_dir.join(with);
-        match get_component(&path){
+        match get_component(&path) {
             Ok(s) => s,
-            Err(_) => format!("<!-- missing component: {} -->", with) // TODO: Throw error 
+            Err(_) => format!("<!-- missing component: {} -->", with), // TODO: Throw error
         }
-    }).into_owned()
+    })
+    .into_owned()
 }
