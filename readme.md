@@ -60,3 +60,4 @@
 - no tests 😥
 - Any kind of good rust practices
     - Error handling improve one day pls
+
