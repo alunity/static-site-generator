@@ -9,9 +9,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Config {
-    styles_css: PathBuf,
-    components_dir: PathBuf,
-    posts_dir: PathBuf,
+    pub styles_css: PathBuf,
+    pub components_dir: PathBuf,
+    pub posts_dir: PathBuf,
 }
 
 impl Default for Config {
