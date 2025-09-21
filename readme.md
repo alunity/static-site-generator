@@ -61,3 +61,11 @@
 - Any kind of good rust practices
     - Error handling improve one day pls
 
+
+# Feed functionality
+
+fn get_posts(posts_dir: &Path) -> Vec<md infos>{
+// 
+}
+
+fn hydrate_post_component(component: String, post: mdInfo) -> String{}

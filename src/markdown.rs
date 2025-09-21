@@ -1,6 +1,47 @@
 use chrono::prelude::*;
-use std::{fs::File, io::Write, path::Path, process::Command};
 use pathdiff::diff_paths;
+use regex::Regex;
+use serde::Deserialize;
+use std::{
+    collections::HashMap,
+    fs::{File, read_dir, read_to_string},
+    io::Write,
+    path::{Path, PathBuf},
+    process::Command,
+    sync::{Mutex, OnceLock},
+};
+
+// Simple per-process cache for component files
+static POST_CACHE: OnceLock<Mutex<HashMap<PathBuf, Vec<MdInfo>>>> = OnceLock::new();
+
+pub fn get_mdinfos_for_path(posts_dir: &Path) -> std::io::Result<Vec<MdInfo>> {
+    let cache = POST_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut map = cache.lock().unwrap();
+
+    if let Some(s) = map.get(posts_dir) {
+        return Ok(s.to_vec());
+    }
+
+    let mut stack= vec![PathBuf::from(posts_dir)];
+    let mut res: Vec<MdInfo> = vec![];
+    while let Some(path) = stack.pop() {
+        for entry in read_dir(path).unwrap() {
+            let entry = entry.unwrap();
+            let p = entry.path();
+            if p.is_dir(){
+                stack.push(p);
+            }else if p.extension().unwrap() == "md"{
+                res.push(get_md_info(&p));
+            }
+        }
+    };
+    map.insert(posts_dir.to_path_buf(), res.to_vec());
+    Ok(res)
+
+    // let s = read_to_string(post_dir)?;
+    // map.insert(post_dir.to_path_buf(), s.clone());
+    // Ok(s)
+}
 
 // user input name -> path to dir -> markdown file
 pub fn create_post(post_name: &str, output_dir_path: &Path) -> () {
@@ -50,6 +91,46 @@ pub fn render_to_html(
     }
     c.arg("-o");
     c.arg(output_path);
-    
+
     c.spawn().unwrap();
+}
+
+#[derive(Debug, Deserialize)]
+struct FrontMatter {
+    title: String,
+    date: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct MdInfo {
+    pub title: String,
+    pub date: NaiveDate,
+    pub content: String,
+    pub path: PathBuf,
+}
+
+pub fn get_md_info(path: &Path) -> MdInfo {
+    let contents = read_to_string(path).unwrap();
+    let re = Regex::new(r"(?s)\A---\s*\n(.*?)\n---\s*\n?(.*)\z").unwrap();
+
+    let caps = re.captures(&contents).unwrap();
+    let fm_str = caps.get(1).unwrap().as_str();
+    let content = caps.get(2).unwrap().as_str();
+
+    let fm: FrontMatter = serde_yaml::from_str(fm_str).unwrap();
+    MdInfo {
+        title: fm.title,
+        date: parse_date(&fm.date),
+        content: content.to_string(),
+        path: path.into(),
+    }
+}
+
+fn parse_date(date_str: &str) -> NaiveDate {
+    // Example date: "Tuesday 16 September 2025"
+    // Format: weekday full name, space-padded day, month full name, year
+    // Chrono format: "%A %e %B %Y"
+    NaiveDate::parse_from_str(date_str, "%A %e %B %Y")
+        .or_else(|_| NaiveDate::parse_from_str(date_str, "%e %B %Y"))
+        .unwrap() // fallback without weekday
 }

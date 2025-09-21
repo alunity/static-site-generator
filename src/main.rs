@@ -12,12 +12,13 @@ use std::{
 use pathdiff::diff_paths;
 
 use crate::{
-    config::{Config, read_config},
+    config::{read_config, Config},
     html::generate_substituted_html,
-    markdown::render_to_html,
+    markdown::{get_md_info, render_to_html},
 };
 
 fn main() {
+    // println!("{:?}", get_md_info(&PathBuf::from("site/src/posts/25_09_16_unified_theory_of_programming_.md")));
     build(&PathBuf::from("site"));
 }
 
@@ -48,7 +49,7 @@ fn build(site_dir: &Path) {
                     let _ = create_dir_all(&dest.parent().unwrap());
 
                     match p.extension().and_then(|s| s.to_str()) {
-                        Some("html") => generate_substituted_html(&p, &dest, &components_dir),
+                        Some("html") => generate_substituted_html(&p, &dest, &components_dir, &posts_dir),
                         Some("md") => {
                             let styles_css = build_dir.join(diff_paths(&styles_css, &src_dir).unwrap());
                             dest.set_extension("html");

@@ -35,7 +35,7 @@ pub fn create_project(dir: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
     create_dir(&components_path)?;
     write(components_path.join("header.html"), DEFAULT_HEADER)?;
     write(components_path.join("footer.html"), DEFAULT_FOOTER)?;
-    write(components_path.join("feed_post.html"), DEFAULT_FEED_POST)?;
+    write(components_path.join("post.html"), DEFAULT_FEED_POST)?;
 
     let posts_path = src_path.join("posts");
     create_dir(&posts_path)?;
@@ -64,7 +64,7 @@ const DEFAULT_INDEX: &str = r#"<!doctype html>
 
 const DEFAULT_CSS: &str = "/* Add your styles */\n";
 
-const DEFAULT_FEED: &str = "<!-- feed placeholder -->\n";
+const DEFAULT_FEED: &str = "<FEED with=\"posts\">\n";
 
 const DEFAULT_HEADER: &str = "<div>header</div>\n";
 const DEFAULT_FOOTER: &str = "<div>footer</div>\n";
