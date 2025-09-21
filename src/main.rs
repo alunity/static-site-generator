@@ -13,11 +13,7 @@ use std::{
 use clap::{Parser, Subcommand};
 use pathdiff::diff_paths;
 
-use crate::{
-    config::{read_config},
-    html::generate_substituted_html,
-    markdown::{render_to_html},
-};
+use crate::{config::read_config, html::generate_substituted_html, markdown::render_to_html};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -26,13 +22,18 @@ struct Cli {
     #[command(subcommand)]
     command: Commands,
 
+    // Project Path
     path: PathBuf,
 }
 
 #[derive(Subcommand)]
 enum Commands {
     /// Builds static site
-    Build,
+    Build {
+        /// Output dir
+        #[arg(short, long)]
+        output_dir: Option<PathBuf>,
+    },
     /// Creates new site
     Init,
     /// Creates new post
@@ -47,7 +48,13 @@ fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Build => build(&cli.path),
+        Commands::Build { output_dir } => {
+            if let Some(path) = output_dir {
+                build(&cli.path, &path);
+            } else {
+                build(&cli.path, &cli.path.join("static"));
+            }
+        }
         Commands::Init => default::create_project(&cli.path).unwrap(),
         Commands::Post {
             name,
@@ -71,13 +78,12 @@ fn main() {
     }
 }
 
-fn build(site_dir: &Path) {
+fn build(site_dir: &Path, build_dir: &Path) {
     let c = read_config(&site_dir.join("config.json"));
     let posts_dir = site_dir.join(c.posts_dir);
     let components_dir = site_dir.join(c.components_dir);
     let styles_css = site_dir.join(c.styles_css);
 
-    let build_dir = site_dir.join("static");
     let src_dir = site_dir.join("src");
     let _ = remove_dir_all(&build_dir);
     create_dir(&build_dir).unwrap();
