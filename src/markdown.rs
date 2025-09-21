@@ -37,14 +37,10 @@ pub fn get_mdinfos_for_path(posts_dir: &Path) -> std::io::Result<Vec<MdInfo>> {
     };
     map.insert(posts_dir.to_path_buf(), res.to_vec());
     Ok(res)
-
-    // let s = read_to_string(post_dir)?;
-    // map.insert(post_dir.to_path_buf(), s.clone());
-    // Ok(s)
 }
 
 // user input name -> path to dir -> markdown file
-pub fn create_post(post_name: &str, output_dir_path: &Path) -> () {
+pub fn create_post(post_name: &str, output_dir_path: &Path) -> PathBuf {
     let mut file_safe_name = post_name.to_string();
     // Remove non alphanumeric characters and change spaces to underscores
     let separator = '_';
@@ -60,11 +56,12 @@ pub fn create_post(post_name: &str, output_dir_path: &Path) -> () {
 
     let md_path = output_dir_path.join(format!("{file_safe_date}_{file_safe_name}.md"));
 
-    let mut file = File::create(md_path).unwrap();
+    let mut file = File::create(&md_path).unwrap();
     writeln!(&mut file, "---").unwrap();
     writeln!(&mut file, "title: {post_name}").unwrap();
     writeln!(&mut file, "date: {md_date}").unwrap();
     writeln!(&mut file, "---").unwrap();
+    md_path
 }
 
 pub fn render_to_html(

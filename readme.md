@@ -47,13 +47,13 @@
 ```
 
 - We'll standardise on just those 3 properties: TITLE, DATE, CONTENT
-- Ideally we should only put a certain amount into content but I'm thinking we put all of it and truncate with css
+- Ideally we should only put a certain amount into content but I'm thinking we put all of it and truncate with CSS
 
 # Build order
 
-1. Convert md to html
+1. Convert MD to HTML
 2. Replace tags
-    - md to html is a prerequesite since <FEED> requires html
+    - md to html is a prerequesite since <FEED> requires HTML
 
 # Current limitations of design and implementation in the name of progress
 - components must be in the components folder and can be selected by name only, no nesting or path things
@@ -61,11 +61,12 @@
 - Any kind of good rust practices
     - Error handling improve one day pls
 
+# TODO
 
-# Feed functionality
-
-fn get_posts(posts_dir: &Path) -> Vec<md infos>{
-// 
-}
-
-fn hydrate_post_component(component: String, post: mdInfo) -> String{}
+- CLI interface
+- Error handling!!! Instead of just panicking all over the place
+    - Creating a post with the same name wipes
+- Actually make a nice feed page
+- Auto insert CSS???
+- Tags
+    - Make generic :O directory traversal function

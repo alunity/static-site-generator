@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 chrono = "0.4.42"
+clap = {version = "4.5.48", features = ["derive"]}
 pathdiff = "0.2.3"
 regex = "1.11.2"
 serde = { version = "1.0.225", features = ["derive"] }

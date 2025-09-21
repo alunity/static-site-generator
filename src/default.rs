@@ -64,7 +64,7 @@ const DEFAULT_INDEX: &str = r#"<!doctype html>
 
 const DEFAULT_CSS: &str = "/* Add your styles */\n";
 
-const DEFAULT_FEED: &str = "<FEED with=\"posts\">\n";
+const DEFAULT_FEED: &str = "<FEED with=\"post.html\">\n";
 
 const DEFAULT_HEADER: &str = "<div>header</div>\n";
 const DEFAULT_FOOTER: &str = "<div>footer</div>\n";

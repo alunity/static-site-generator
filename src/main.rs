@@ -5,21 +5,70 @@ mod html;
 mod markdown;
 
 use std::{
-    fs::{DirEntry, copy, create_dir, create_dir_all, read_dir, remove_dir_all},
+    fs::{copy, create_dir, create_dir_all, read_dir, remove_dir_all},
     path::{Path, PathBuf},
+    process::Command,
 };
 
+use clap::{Parser, Subcommand};
 use pathdiff::diff_paths;
 
 use crate::{
-    config::{read_config, Config},
+    config::{read_config},
     html::generate_substituted_html,
-    markdown::{get_md_info, render_to_html},
+    markdown::{render_to_html},
 };
 
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+#[command(propagate_version = true)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+
+    path: PathBuf,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Builds static site
+    Build,
+    /// Creates new site
+    Init,
+    /// Creates new post
+    ///
+    Post {
+        name: String,
+        open_in_editor: Option<bool>,
+    },
+}
+
 fn main() {
-    // println!("{:?}", get_md_info(&PathBuf::from("site/src/posts/25_09_16_unified_theory_of_programming_.md")));
-    build(&PathBuf::from("site"));
+    let cli = Cli::parse();
+
+    match &cli.command {
+        Commands::Build => build(&cli.path),
+        Commands::Init => default::create_project(&cli.path).unwrap(),
+        Commands::Post {
+            name,
+            open_in_editor,
+        } => {
+            let md_path = markdown::create_post(
+                name,
+                &cli.path
+                    .join(&read_config(&cli.path.join("config.json")).posts_dir),
+            );
+            if let Some(open) = open_in_editor
+                && *open
+            {
+                if let Ok(editor) = std::env::var("EDITOR") {
+                    Command::new(editor).arg(&md_path).status().ok();
+                } else {
+                    println!("$EDITOR not set; cannot open file.");
+                }
+            }
+        }
+    }
 }
 
 fn build(site_dir: &Path) {
@@ -49,12 +98,15 @@ fn build(site_dir: &Path) {
                     let _ = create_dir_all(&dest.parent().unwrap());
 
                     match p.extension().and_then(|s| s.to_str()) {
-                        Some("html") => generate_substituted_html(&p, &dest, &components_dir, &posts_dir),
+                        Some("html") => {
+                            generate_substituted_html(&p, &dest, &components_dir, &posts_dir)
+                        }
                         Some("md") => {
-                            let styles_css = build_dir.join(diff_paths(&styles_css, &src_dir).unwrap());
+                            let styles_css =
+                                build_dir.join(diff_paths(&styles_css, &src_dir).unwrap());
                             dest.set_extension("html");
                             render_to_html(&p, &dest, Some(&styles_css), None, None)
-                        },
+                        }
                         Some(_) => {
                             copy(&p, &dest).unwrap();
                         }

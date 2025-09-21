@@ -1,7 +1,5 @@
 use std::{
-    default,
     fs::read_to_string,
-    io::Result,
     path::{Path, PathBuf},
 };
 

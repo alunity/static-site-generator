@@ -63,8 +63,6 @@ fn substitute_feed(
             .unwrap()
             .iter()
             .map(|c| {
-                println!("{} {}", curr_path.display(), &c.path.display());
-
                 let mut new_path = c.path.clone();
                 new_path.set_extension("html");
 
