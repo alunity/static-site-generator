@@ -98,10 +98,10 @@ struct FrontMatter {
     date: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MdInfo {
-    pub title: String,
     pub date: NaiveDate,
+    pub title: String,
     pub content: String,
     pub path: PathBuf,
 }

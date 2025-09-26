@@ -59,8 +59,11 @@ fn substitute_feed(
         let path = components_dir.join(with);
 
         let component = get_component(&path).unwrap();
-        let hydrated_components: Vec<String> = get_mdinfos_for_path(&posts_dir)
-            .unwrap()
+
+        let mut mdinfos = get_mdinfos_for_path(&posts_dir).unwrap();
+        mdinfos.sort();
+        mdinfos.reverse();
+        let hydrated_components: Vec<String> = mdinfos
             .iter()
             .map(|c| {
                 let mut new_path = c.path.clone();
