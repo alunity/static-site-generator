@@ -8,7 +8,7 @@ use std::{
     sync::OnceLock,
 };
 
-use crate::markdown::{MdInfo, get_mdinfos_for_path};
+use crate::markdown::{get_mdinfos_for_path};
 
 // Simple per-process cache for component files
 static COMPONENT_CACHE: OnceLock<Mutex<HashMap<PathBuf, String>>> = OnceLock::new();
@@ -69,14 +69,14 @@ fn substitute_feed(
                 let mut new_path = c.path.clone();
                 new_path.set_extension("html");
 
-                MdInfo {
-                    title: c.title.to_owned(),
-                    date: c.date,
-                    content: c.content.to_owned(),
-                    path: diff_paths(new_path, curr_path.parent().unwrap()).unwrap(),
-                }
+                HashMap::from([
+                    ("TITLE", c.title.to_owned()),
+                    ("DATE", c.date.format("%A %d %B %Y").to_string()),
+                    ("CONTENT", c.content.to_owned()),
+                    ("PATH", diff_paths(new_path, curr_path.parent().unwrap()).unwrap().to_string_lossy().to_string())
+                ])
             })
-            .map(|c| hydrate_post_component(&component, c))
+            .map(|c| hydrate_component(&component, c))
             .collect();
 
         hydrated_components.join("\n")
@@ -84,12 +84,16 @@ fn substitute_feed(
     .into_owned()
 }
 
-fn hydrate_post_component(component: &String, post: MdInfo) -> String {
-    // Supporting tags: {TITLE}, {DATE}, {CONTENT}, {PATH}
-    let mut res = component.replace("{TITLE}", &post.title);
-    res = res.replace("{DATE}", &post.date.format("%A %d %B %Y").to_string());
-    res = res.replace("{CONTENT}", &post.content);
-    res = res.replace("{PATH}", &post.path.to_string_lossy());
+fn hydrate_component(component: &str, fields: HashMap<&str, String>) -> String {
+    let re = Regex::new(r"\{([[:alpha:]]*)\}").unwrap();
 
-    res
+    re.replace_all(&component, |caps: &regex::Captures| {
+        let text = caps.get(0).unwrap().as_str();
+        let field = caps.get(1).unwrap().as_str();
+        if fields.contains_key(field) {
+            fields.get(field).unwrap().to_string()
+        } else {
+            text.to_string()
+        }
+    }).to_string()
 }
