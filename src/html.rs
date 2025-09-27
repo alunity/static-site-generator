@@ -33,7 +33,7 @@ pub fn generate_substituted_html(src: &Path, dest: &Path, components_dir: &Path,
 }
 
 fn substitute_replace(contents: &str, components_dir: &Path) -> String {
-    let re = Regex::new(r#"<REPLACE\b[^>]*\bwith="([^"]*)"[^>]*/?>"#).unwrap();
+    let re = Regex::new(r#"<REPLACE\b[^>]*\bwith="([^"]*)"[^>]*/>"#).unwrap();
 
     re.replace_all(contents, |caps: &regex::Captures| {
         let with = caps.get(1).unwrap().as_str();
@@ -52,7 +52,7 @@ fn substitute_feed(
     components_dir: &Path,
     posts_dir: &Path,
 ) -> String {
-    let re = Regex::new(r#"<FEED\b[^>]*\bwith="([^"]*)"[^>]*/?>"#).unwrap();
+    let re = Regex::new(r#"<FEED\b[^>]*\bwith="([^"]*)"[^>]*/>"#).unwrap();
 
     re.replace_all(contents, |caps: &regex::Captures| {
         let with = caps.get(1).unwrap().as_str();

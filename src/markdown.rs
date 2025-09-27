@@ -72,7 +72,7 @@ pub fn render_to_html(
     footer_path: Option<&Path>,
 ) -> () {
     let mut c = Command::new("pandoc");
-    c.arg(md_path).arg("-s");
+    c.arg(md_path).arg("-s").arg("--mathjax");
 
     if let Some(css_path) = css_path {
         c.arg("-c");
