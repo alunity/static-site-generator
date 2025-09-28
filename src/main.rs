@@ -13,7 +13,10 @@ use std::{
 use clap::{Parser, Subcommand};
 use pathdiff::diff_paths;
 
-use crate::{config::read_config, html::generate_substituted_html, markdown::render_to_html};
+use crate::{
+    config::read_config,
+    html::{generate_substituted_html, markdown_post_to_html},
+};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -83,11 +86,12 @@ fn build(site_dir: &Path, build_dir: &Path) {
     let posts_dir = site_dir.join(c.posts_dir);
     let components_dir = site_dir.join(c.components_dir);
     let styles_css = site_dir.join(c.styles_css);
+    let templates_dir = site_dir.join(c.templates_dir);
 
     let src_dir = site_dir.join("src");
     let _ = remove_dir_all(&build_dir);
     create_dir(&build_dir).unwrap();
-    let blacklist = vec![components_dir.clone()];
+    let blacklist = vec![components_dir.clone(), templates_dir.clone()];
 
     let mut stack = vec![src_dir.clone()];
     while let Some(path) = stack.pop() {
@@ -95,7 +99,6 @@ fn build(site_dir: &Path, build_dir: &Path) {
             let entry = entry.unwrap();
             let p = entry.path();
 
-            // TODO: Add some blacklist instead of hard coding
             if blacklist.iter().all(|x| x != &p) {
                 if p.is_dir() {
                     stack.push(p);
@@ -108,10 +111,14 @@ fn build(site_dir: &Path, build_dir: &Path) {
                             generate_substituted_html(&p, &dest, &components_dir, &posts_dir)
                         }
                         Some("md") => {
-                            let styles_css =
-                                build_dir.join(diff_paths(&styles_css, &src_dir).unwrap());
+                            let styles_css = diff_paths(&styles_css, &p.parent().unwrap()).unwrap();
                             dest.set_extension("html");
-                            render_to_html(&p, &dest, Some(&styles_css), None, None)
+                            markdown_post_to_html(
+                                &p,
+                                &styles_css,
+                                &templates_dir.join("post.html"),
+                                &dest,
+                            );
                         }
                         Some(_) => {
                             copy(&p, &dest).unwrap();

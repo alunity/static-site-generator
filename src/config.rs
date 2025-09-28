@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     pub styles_css: PathBuf,
     pub components_dir: PathBuf,
+    pub templates_dir: PathBuf,
     pub posts_dir: PathBuf,
 }
 
@@ -17,6 +18,7 @@ impl Default for Config {
         Config {
             styles_css: PathBuf::from("src/styles.css"),
             components_dir: PathBuf::from("src/components"),
+            templates_dir: PathBuf::from("src/templates"),
             posts_dir: PathBuf::from("src/posts"),
         }
     }
