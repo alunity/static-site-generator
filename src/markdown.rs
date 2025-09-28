@@ -3,12 +3,7 @@ use pathdiff::diff_paths;
 use regex::Regex;
 use serde::Deserialize;
 use std::{
-    collections::HashMap,
-    fs::{File, read_dir, read_to_string},
-    io::Write,
-    path::{Path, PathBuf},
-    process::Command,
-    sync::{Mutex, OnceLock},
+    cmp, collections::HashMap, fs::{read_dir, read_to_string, File}, io::Write, path::{Path, PathBuf}, process::Command, sync::{Mutex, OnceLock}
 };
 
 // Simple per-process cache for component files
@@ -22,19 +17,19 @@ pub fn get_mdinfos_for_path(posts_dir: &Path) -> std::io::Result<Vec<MdInfo>> {
         return Ok(s.to_vec());
     }
 
-    let mut stack= vec![PathBuf::from(posts_dir)];
+    let mut stack = vec![PathBuf::from(posts_dir)];
     let mut res: Vec<MdInfo> = vec![];
     while let Some(path) = stack.pop() {
         for entry in read_dir(path).unwrap() {
             let entry = entry.unwrap();
             let p = entry.path();
-            if p.is_dir(){
+            if p.is_dir() {
                 stack.push(p);
-            }else if p.extension().unwrap() == "md"{
+            } else if p.extension().unwrap() == "md" {
                 res.push(get_md_info(&p));
             }
         }
-    };
+    }
     map.insert(posts_dir.to_path_buf(), res.to_vec());
     Ok(res)
 }
@@ -70,7 +65,7 @@ pub fn render_to_html(
     css_path: Option<&Path>,
     header_path: Option<&Path>,
     footer_path: Option<&Path>,
-) -> () {
+) -> String {
     let mut c = Command::new("pandoc");
     c.arg(md_path).arg("-s").arg("--mathjax");
 
@@ -86,10 +81,29 @@ pub fn render_to_html(
         c.arg("-A");
         c.arg(footer_path);
     }
-    c.arg("-o");
-    c.arg(output_path);
+    String::from_utf8(c.output().unwrap().stdout).expect("Pandoc failed")
+}
 
-    c.spawn().unwrap();
+pub fn add_meta_to_post_html(html: String, c: &MdInfo, url: &str, og_image_url: &str) -> String {
+    let descr: Vec<char> = c.content.chars().collect();
+    let mut descr: String = descr[0..cmp::min(80, descr.len())].iter().collect();
+    descr = descr.replace("\n", " ");
+    descr += "...";
+
+    html.replace(
+        "</head>",
+        &format!(
+            r#"
+            <meta property="og:title" content="{}" />
+            <meta property="og:type" content="article" />
+            <meta property="og:url" content="{}" />
+            <meta property="og:image" content="{}" />
+            <meta property="og:description" content="{}" />
+        </head>
+    "#,
+            c.title, url, og_image_url, descr
+        ),
+    )
 }
 
 #[derive(Debug, Deserialize)]
@@ -106,7 +120,7 @@ pub struct MdInfo {
     pub path: PathBuf,
 }
 
-pub fn get_md_info(path: &Path) -> MdInfo {
+fn get_md_info(path: &Path) -> MdInfo {
     let contents = read_to_string(path).unwrap();
     let re = Regex::new(r"(?s)\A---\s*\n(.*?)\n---\s*\n?(.*)\z").unwrap();
 

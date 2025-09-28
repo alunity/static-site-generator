@@ -5,7 +5,7 @@ mod html;
 mod markdown;
 
 use std::{
-    fs::{copy, create_dir, create_dir_all, read_dir, remove_dir_all},
+    fs::{copy, create_dir, create_dir_all, read_dir, remove_dir_all, write},
     path::{Path, PathBuf},
     process::Command,
 };
@@ -13,7 +13,11 @@ use std::{
 use clap::{Parser, Subcommand};
 use pathdiff::diff_paths;
 
-use crate::{config::read_config, html::generate_substituted_html, markdown::render_to_html};
+use crate::{
+    config::read_config,
+    html::generate_substituted_html,
+    markdown::{add_meta_to_post_html, get_mdinfos_for_path, render_to_html},
+};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -83,6 +87,8 @@ fn build(site_dir: &Path, build_dir: &Path) {
     let posts_dir = site_dir.join(c.posts_dir);
     let components_dir = site_dir.join(c.components_dir);
     let styles_css = site_dir.join(c.styles_css);
+    let url = c.hosted_url;
+    let og_image_url = c.og_image_url;
 
     let src_dir = site_dir.join("src");
     let _ = remove_dir_all(&build_dir);
@@ -111,7 +117,16 @@ fn build(site_dir: &Path, build_dir: &Path) {
                             let styles_css =
                                 build_dir.join(diff_paths(&styles_css, &src_dir).unwrap());
                             dest.set_extension("html");
-                            render_to_html(&p, &dest, Some(&styles_css), None, None)
+                            let html = render_to_html(&p, &dest, Some(&styles_css), None, None);
+                            let q = get_mdinfos_for_path(p.parent().unwrap()).unwrap();
+                            let c = q.iter().filter(|c| c.path == p).next().unwrap();
+                            let post_url = url.clone() + "/"
+                                + &diff_paths(&dest, &build_dir)
+                                    .unwrap()
+                                    .to_string_lossy()
+                                    .to_string();
+
+                            write(dest, add_meta_to_post_html(html, c, &post_url, &og_image_url)).unwrap();
                         }
                         Some(_) => {
                             copy(&p, &dest).unwrap();
