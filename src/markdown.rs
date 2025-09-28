@@ -84,7 +84,7 @@ pub fn render_to_html(
     String::from_utf8(c.output().unwrap().stdout).expect("Pandoc failed")
 }
 
-pub fn add_meta_to_post_html(html: String, c: &MdInfo, url: &str, og_image_url: &str) -> String {
+pub fn add_meta_to_post_html(html: String, c: &MdInfo, url: &str, og_image_url: &str, site_name: &str) -> String {
     let descr: Vec<char> = c.content.chars().collect();
     let mut descr: String = descr[0..cmp::min(80, descr.len())].iter().collect();
     descr = descr.replace("\n", " ");
@@ -99,9 +99,10 @@ pub fn add_meta_to_post_html(html: String, c: &MdInfo, url: &str, og_image_url: 
             <meta property="og:url" content="{}" />
             <meta property="og:image" content="{}" />
             <meta property="og:description" content="{}" />
+            <meta property="og:site_name" content="{}" />
         </head>
     "#,
-            c.title, url, og_image_url, descr
+            c.title, url, og_image_url, descr, site_name
         ),
     )
 }

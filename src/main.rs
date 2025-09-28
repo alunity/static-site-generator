@@ -87,8 +87,6 @@ fn build(site_dir: &Path, build_dir: &Path) {
     let posts_dir = site_dir.join(c.posts_dir);
     let components_dir = site_dir.join(c.components_dir);
     let styles_css = site_dir.join(c.styles_css);
-    let url = c.hosted_url;
-    let og_image_url = c.og_image_url;
 
     let src_dir = site_dir.join("src");
     let _ = remove_dir_all(&build_dir);
@@ -118,15 +116,17 @@ fn build(site_dir: &Path, build_dir: &Path) {
                                 build_dir.join(diff_paths(&styles_css, &src_dir).unwrap());
                             dest.set_extension("html");
                             let html = render_to_html(&p, &dest, Some(&styles_css), None, None);
-                            let q = get_mdinfos_for_path(p.parent().unwrap()).unwrap();
-                            let c = q.iter().filter(|c| c.path == p).next().unwrap();
-                            let post_url = url.clone() + "/"
+
+                            let md_infos = get_mdinfos_for_path(p.parent().unwrap()).unwrap();
+                            let md_info = md_infos.iter().filter(|c| c.path == p).next().unwrap();
+
+                            let post_url = c.hosted_url.clone() + "/"
                                 + &diff_paths(&dest, &build_dir)
                                     .unwrap()
                                     .to_string_lossy()
                                     .to_string();
 
-                            write(dest, add_meta_to_post_html(html, c, &post_url, &og_image_url)).unwrap();
+                            write(dest, add_meta_to_post_html(html, md_info, &post_url, &c.og_image_url, &c.site_name)).unwrap();
                         }
                         Some(_) => {
                             copy(&p, &dest).unwrap();
