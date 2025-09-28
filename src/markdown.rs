@@ -1,4 +1,5 @@
 use chrono::prelude::*;
+use pathdiff::diff_paths;
 use regex::Regex;
 use serde::Deserialize;
 use std::{
@@ -21,19 +22,19 @@ pub fn get_mdinfos_for_path(posts_dir: &Path) -> std::io::Result<Vec<MdInfo>> {
         return Ok(s.to_vec());
     }
 
-    let mut stack = vec![PathBuf::from(posts_dir)];
+    let mut stack= vec![PathBuf::from(posts_dir)];
     let mut res: Vec<MdInfo> = vec![];
     while let Some(path) = stack.pop() {
         for entry in read_dir(path).unwrap() {
             let entry = entry.unwrap();
             let p = entry.path();
-            if p.is_dir() {
+            if p.is_dir(){
                 stack.push(p);
-            } else if p.extension().unwrap() == "md" {
+            }else if p.extension().unwrap() == "md"{
                 res.push(get_md_info(&p));
             }
         }
-    }
+    };
     map.insert(posts_dir.to_path_buf(), res.to_vec());
     Ok(res)
 }
@@ -63,14 +64,32 @@ pub fn create_post(post_name: &str, output_dir_path: &Path) -> PathBuf {
     md_path
 }
 
-// Look into if we should remove css_path and header after template change
 pub fn render_to_html(
     md_path: &Path,
-) -> String {
+    output_path: &Path,
+    css_path: Option<&Path>,
+    header_path: Option<&Path>,
+    footer_path: Option<&Path>,
+) -> () {
     let mut c = Command::new("pandoc");
-    c.arg(md_path).arg("--mathjax");
+    c.arg(md_path).arg("-s").arg("--mathjax");
 
-    String::from_utf8(c.output().expect("Pandoc failed").stdout).unwrap()
+    if let Some(css_path) = css_path {
+        c.arg("-c");
+        c.arg(diff_paths(css_path, output_path.parent().unwrap()).unwrap());
+    }
+    if let Some(header_path) = header_path {
+        c.arg("-B");
+        c.arg(header_path);
+    }
+    if let Some(footer_path) = footer_path {
+        c.arg("-A");
+        c.arg(footer_path);
+    }
+    c.arg("-o");
+    c.arg(output_path);
+
+    c.spawn().unwrap();
 }
 
 #[derive(Debug, Deserialize)]

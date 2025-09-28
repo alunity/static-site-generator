@@ -8,7 +8,7 @@ use std::{
     sync::OnceLock,
 };
 
-use crate::markdown::{get_md_info, get_mdinfos_for_path, render_to_html};
+use crate::markdown::{get_mdinfos_for_path};
 
 // Simple per-process cache for component files
 static COMPONENT_CACHE: OnceLock<Mutex<HashMap<PathBuf, String>>> = OnceLock::new();
@@ -73,13 +73,7 @@ fn substitute_feed(
                     ("TITLE", c.title.to_owned()),
                     ("DATE", c.date.format("%A %d %B %Y").to_string()),
                     ("CONTENT", c.content.to_owned()),
-                    (
-                        "PATH",
-                        diff_paths(new_path, curr_path.parent().unwrap())
-                            .unwrap()
-                            .to_string_lossy()
-                            .to_string(),
-                    ),
+                    ("PATH", diff_paths(new_path, curr_path.parent().unwrap()).unwrap().to_string_lossy().to_string())
                 ])
             })
             .map(|c| hydrate_component(&component, c))
@@ -101,31 +95,5 @@ fn hydrate_component(component: &str, fields: HashMap<&str, String>) -> String {
         } else {
             text.to_string()
         }
-    })
-    .to_string()
-}
-
-pub fn markdown_post_to_html(
-    post: &PathBuf,
-    css_path: &PathBuf,
-    template: &PathBuf,
-    output: &PathBuf,
-) {
-    let post_to_html = render_to_html(post);
-    let template = get_component(template).unwrap();
-
-    let md_info = get_md_info(&post);
-
-    write(
-        output,
-        hydrate_component(
-            &template,
-            HashMap::from([
-                ("TITLE", md_info.title),
-                ("DATE", md_info.date.format("%A %d %B %Y").to_string()),
-                ("CONTENT", post_to_html),
-                ("CSSPATH", css_path.to_string_lossy().to_string()),
-            ]),
-        ),
-    ).unwrap();
+    }).to_string()
 }
