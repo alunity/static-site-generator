@@ -3,7 +3,13 @@ use pathdiff::diff_paths;
 use regex::Regex;
 use serde::Deserialize;
 use std::{
-    cmp, collections::HashMap, fs::{read_dir, read_to_string, File}, io::Write, path::{Path, PathBuf}, process::Command, sync::{Mutex, OnceLock}
+    cmp,
+    collections::HashMap,
+    fs::{File, read_dir, read_to_string},
+    io::Write,
+    path::{Path, PathBuf},
+    process::Command,
+    sync::{Mutex, OnceLock},
 };
 
 // Simple per-process cache for component files
@@ -84,11 +90,22 @@ pub fn render_to_html(
     String::from_utf8(c.output().unwrap().stdout).expect("Pandoc failed")
 }
 
-pub fn add_meta_to_post_html(html: String, c: &MdInfo, url: &str, og_image_url: &str, site_name: &str) -> String {
-    let descr: Vec<char> = c.content.chars().collect();
-    let mut descr: String = descr[0..cmp::min(80, descr.len())].iter().collect();
-    descr = descr.replace("\n", " ");
-    descr += "...";
+pub fn truncate_content(content: &str, max_length: usize) -> String {
+    let chars: Vec<char> = content.chars().collect();
+    let mut trunc: String = chars[0..cmp::min(max_length, chars.len())].iter().collect();
+    trunc = trunc.replace("\n", " ");
+    trunc += "...";
+    trunc
+}
+
+pub fn add_meta_to_post_html(
+    html: String,
+    c: &MdInfo,
+    url: &str,
+    og_image_url: &str,
+    site_name: &str,
+) -> String {
+    let descr = truncate_content(&c.content, 80);
 
     html.replace(
         "</head>",

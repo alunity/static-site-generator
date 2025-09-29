@@ -13,6 +13,7 @@ pub struct Config {
     pub hosted_url: String,
     pub og_image_url: String,
     pub site_name: String,
+    pub description: String,
 }
 
 impl Default for Config {
@@ -23,7 +24,8 @@ impl Default for Config {
             posts_dir: PathBuf::from("src/posts"),
             hosted_url: "https://example.com".to_owned(),
             og_image_url: "https://upload.wikimedia.org/wikipedia/en/a/a9/Example.jpg".to_owned(),
-            site_name: "My Site".to_owned()
+            site_name: "My Site".to_owned(),
+            description: "My lovely website".to_owned(),
         }
     }
 }

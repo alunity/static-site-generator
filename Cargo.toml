@@ -8,6 +8,7 @@ chrono = "0.4.42"
 clap = {version = "4.5.48", features = ["derive"]}
 pathdiff = "0.2.3"
 regex = "1.11.2"
+rss-gen = "0.0.3"
 serde = { version = "1.0.225", features = ["derive"] }
 serde_json = "1.0.145"
 serde_yaml = "0.9.34"

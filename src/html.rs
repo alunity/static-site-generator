@@ -8,7 +8,7 @@ use std::{
     sync::OnceLock,
 };
 
-use crate::markdown::{get_mdinfos_for_path};
+use crate::markdown::{get_mdinfos_for_path, truncate_content};
 
 // Simple per-process cache for component files
 static COMPONENT_CACHE: OnceLock<Mutex<HashMap<PathBuf, String>>> = OnceLock::new();
@@ -72,7 +72,7 @@ fn substitute_feed(
                 HashMap::from([
                     ("TITLE", c.title.to_owned()),
                     ("DATE", c.date.format("%A %d %B %Y").to_string()),
-                    ("CONTENT", c.content.to_owned()),
+                    ("CONTENT", truncate_content(&c.content, 160)),
                     ("PATH", diff_paths(new_path, curr_path.parent().unwrap()).unwrap().to_string_lossy().to_string())
                 ])
             })
