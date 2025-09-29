@@ -87,9 +87,9 @@ fn main() {
 
 fn build(site_dir: &Path, build_dir: &Path) {
     let c = read_config(&site_dir.join("config.json"));
-    let posts_dir = site_dir.join(c.posts_dir);
-    let components_dir = site_dir.join(c.components_dir);
-    let styles_css = site_dir.join(c.styles_css);
+    let posts_dir = site_dir.join(&c.posts_dir);
+    let components_dir = site_dir.join(&c.components_dir);
+    let styles_css = site_dir.join(&c.styles_css);
 
     let src_dir = site_dir.join("src");
     let _ = remove_dir_all(&build_dir);
@@ -117,7 +117,7 @@ fn build(site_dir: &Path, build_dir: &Path) {
 
                     match p.extension().and_then(|s| s.to_str()) {
                         Some("html") => {
-                            generate_substituted_html(&p, &dest, &components_dir, &posts_dir)
+                            generate_substituted_html(&p, &dest, &posts_dir, &components_dir, &c)
                         }
                         Some("md") => {
                             let styles_css =
@@ -152,8 +152,14 @@ fn build(site_dir: &Path, build_dir: &Path) {
                                     .title(&md_info.title)
                                     .description(truncate_content(&md_info.content, 80))
                                     .guid(&post_url)
-                                    .pub_date(DateTime::<Utc>::from_naive_utc_and_offset(md_info.date.and_hms_opt(0, 0, 0).unwrap(), Utc).to_rfc2822())
-                                    .link(&post_url)
+                                    .pub_date(
+                                        DateTime::<Utc>::from_naive_utc_and_offset(
+                                            md_info.date.and_hms_opt(0, 0, 0).unwrap(),
+                                            Utc,
+                                        )
+                                        .to_rfc2822(),
+                                    )
+                                    .link(&post_url),
                             );
                         }
                         Some(_) => {

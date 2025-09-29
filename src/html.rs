@@ -8,7 +8,7 @@ use std::{
     sync::OnceLock,
 };
 
-use crate::markdown::{get_mdinfos_for_path, truncate_content};
+use crate::{config::Config, markdown::{get_mdinfos_for_path, truncate_content}};
 
 // Simple per-process cache for component files
 static COMPONENT_CACHE: OnceLock<Mutex<HashMap<PathBuf, String>>> = OnceLock::new();
@@ -25,10 +25,11 @@ fn get_component(path: &Path) -> std::io::Result<String> {
     Ok(s)
 }
 
-pub fn generate_substituted_html(src: &Path, dest: &Path, components_dir: &Path, posts_dir: &Path) {
+pub fn generate_substituted_html(src: &Path, dest: &Path, posts_dir: &Path, components_dir: &Path ,config: &Config) {
     let mut contents = read_to_string(src).unwrap();
     contents = substitute_replace(&contents, components_dir);
     contents = substitute_feed(&contents, src, components_dir, posts_dir);
+    contents = add_rss_meta(&contents, &config.hosted_url, &config.site_name);
     write(dest, contents).unwrap();
 }
 
@@ -96,4 +97,13 @@ fn hydrate_component(component: &str, fields: HashMap<&str, String>) -> String {
             text.to_string()
         }
     }).to_string()
+}
+
+fn add_rss_meta(contents: &str, url: &str, title: &str) -> String {
+    contents.replace("</head>", &format!(r#"
+      <link rel="alternate"
+        type="application/rss+xml"
+        href="{}"
+        title="{}">
+    </head>"#, String::from(url) + "/feed.xml", title))
 }
