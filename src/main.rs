@@ -3,6 +3,7 @@ mod config;
 mod default;
 mod html;
 mod markdown;
+mod rss;
 
 use std::{
     fs::{copy, create_dir, create_dir_all, read_dir, remove_dir_all, write},
@@ -20,6 +21,7 @@ use crate::{
     config::read_config,
     html::generate_substituted_html,
     markdown::{add_meta_to_post_html, get_mdinfos_for_path, render_to_html, truncate_content},
+    rss::add_rss_meta,
 };
 
 #[derive(Parser)]
@@ -137,11 +139,15 @@ fn build(site_dir: &Path, build_dir: &Path) {
 
                             write(
                                 dest,
-                                add_meta_to_post_html(
-                                    html,
-                                    md_info,
-                                    &post_url,
-                                    &c.og_image_url,
+                                add_rss_meta(
+                                    &add_meta_to_post_html(
+                                        html,
+                                        md_info,
+                                        &post_url,
+                                        &c.og_image_url,
+                                        &c.site_name,
+                                    ),
+                                    &c.hosted_url,
                                     &c.site_name,
                                 ),
                             )

@@ -8,7 +8,7 @@ use std::{
     sync::OnceLock,
 };
 
-use crate::{config::Config, markdown::{get_mdinfos_for_path, truncate_content}};
+use crate::{config::Config, markdown::{get_mdinfos_for_path, truncate_content}, rss::add_rss_meta};
 
 // Simple per-process cache for component files
 static COMPONENT_CACHE: OnceLock<Mutex<HashMap<PathBuf, String>>> = OnceLock::new();
@@ -99,11 +99,4 @@ fn hydrate_component(component: &str, fields: HashMap<&str, String>) -> String {
     }).to_string()
 }
 
-fn add_rss_meta(contents: &str, url: &str, title: &str) -> String {
-    contents.replace("</head>", &format!(r#"
-      <link rel="alternate"
-        type="application/rss+xml"
-        href="{}"
-        title="{}">
-    </head>"#, String::from(url) + "/feed.xml", title))
-}
+
