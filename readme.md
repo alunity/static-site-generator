@@ -1,72 +1,232 @@
-# Default Init Project
+# static_site_generator
 
-- site
-    - src
-        - index.html
-        - styles.css
-            - Applied to all files
-        - feed.html
-        - components
-            - header.html
-            - footer.html
-            - feed_post.html
-                - component which shows the html style for one post on feed.html
-        - posts
-            - [your_posts].md
-            - attachments
-                - Attachments go in here
-                - some_img.png
-    - static
-        - Generated stuff comes here
-        - File structure is duplicated, without components
-        - post markdown files are converted to html
-    - config.something (maybe)
+Minimal Rust static site & blog generator with:
 
-# Tags
+- Markdown -> HTML via Pandoc (with MathJax support)
+- Component inclusion tags
+- Automatic feed page generation
+- Open Graph + RSS metadata
+- RSS 2.0 feed (`feed.xml`)
+- Simple project bootstrap
 
-- Let's not do path here to avoid doing annoying path handling rn TODO
-- This means you can't organise components into directories for now, but that's fine
-```html
-<REPLACE with="named_component"/>
-```
-- Replace with component
+---
 
-```html
-<FEED with="posts_component">
-```
-- bespoke tag to be used exclusively for the posts feed type behaviour
-- will take the component and spawn an instance of it for every post
-- components will have special tags specifying where information should go
+## Quick Start
 
-```html
-<div>
-    <p>{TITLE}</p>
-    <p>{DATE}</p>
-    <p>{CONTENT}</p>
-</div>
+```bash
+cargo install --path .
+static_site_generator Init my_site
+cd my_site
+static_site_generator Post "My First Post" .
+# edit generated src/posts/YY_MM_DD_my_first_post.md
+static_site_generator Build .
+# output in ./static
 ```
 
-- We'll standardise on just those 3 properties: TITLE, DATE, CONTENT
-- Ideally we should only put a certain amount into content but I'm thinking we put all of it and truncate with CSS
+Ensure `pandoc` is installed and on PATH.
 
-# Build order
+---
 
-1. Convert MD to HTML
-2. Replace tags
-    - md to html is a prerequesite since <FEED> requires HTML
+## CLI
 
-# Current limitations of design and implementation in the name of progress
-- components must be in the components folder and can be selected by name only, no nesting or path things
-- no tests 😥
-- Any kind of good rust practices
-    - Error handling improve one day pls
+Defined in [src/main.rs](src/main.rs) (`clap`).
 
-# TODO
+Commands (all require a final positional PATH to the project root):
 
-- CLI interface
-- Error handling!!! Instead of just panicking all over the place
-    - Creating a post with the same name wipes
-- Actually make a nice feed page
-- Auto insert CSS???
-- Tags
-    - Make generic :O directory traversal function
+```
+static_site_generator Build [--output-dir <dir>] <path>
+static_site_generator Init <path>
+static_site_generator Post [--open-in-editor <true|false>] <name> <path>
+```
+
+- Build: processes `src/` into a mirrored `static/` (or `--output-dir`)
+- Init: scaffolds a new site (config, components, example post)
+- Post: creates a new Markdown post (opens in $EDITOR if set and not disabled)
+
+Symbols: [`Commands`](src/main.rs), [`markdown::create_post`](src/markdown.rs)
+
+---
+
+## Project Layout
+
+After `Init`:
+
+```
+config.json
+src/
+  index.html
+  feed.html
+  styles.css
+  components/
+    header.html
+    footer.html
+    post.html
+  posts/
+    YY_MM_DD_example_post.md
+    attachments/
+static/ (generated on Build)
+```
+
+---
+
+## config.json
+
+Structure from [`config::Config`](src/config.rs):
+
+```json
+{
+  "styles_css": "src/styles.css",
+  "components_dir": "src/components",
+  "posts_dir": "src/posts",
+  "hosted_url": "https://example.com",
+  "og_image_url": "https://upload.wikimedia.org/wikipedia/en/a/a9/Example.jpg",
+  "site_name": "My Site",
+  "description": "My lovely website"
+}
+```
+
+`hosted_url` must be the canonical absolute base (no trailing slash).  
+Used for RSS + Open Graph tags.
+
+---
+
+## Tags (Template Directives)
+
+Processed in [`html::generate_substituted_html`](src/html.rs).
+
+### Component Include
+
+```html
+<REPLACE with="header.html" />
+```
+
+- Loads file from `components_dir`
+- Replaces the self-closing tag inline
+- Cached in‑process
+
+Resolved by [`html::substitute_replace`](src/html.rs).
+
+### Feed Expansion
+
+```html
+<FEED with="post.html" />
+```
+
+- Repeated once per post (sorted newest first)
+- Template file (e.g. `post.html`) can contain placeholders:
+  - `{TITLE}`
+  - `{DATE}` (original front‑matter date)
+  - `{CONTENT}` (truncated)
+  - `{PATH}` (relative link to generated post HTML)
+
+Expansion logic in [`html::substitute_feed`](src/html.rs).  
+Content truncation in [`markdown::truncate_content`](src/markdown.rs).
+
+Example component (`src/components/post.html`):
+
+```html
+<article class="post">
+  <h2><a href="{PATH}">{TITLE}</a></h2>
+  <time>{DATE}</time>
+  <p>{CONTENT}</p>
+</article>
+```
+
+---
+
+## Posts
+
+Created by [`markdown::create_post`](src/markdown.rs). Generates front matter:
+
+```yaml
+---
+title: Example Post
+date: Tuesday 16 September 2025
+---
+```
+
+Date parsing in [`markdown::parse_date`](src/markdown.rs) accepts:
+
+- $%A\ %e\ %B\ %Y$ or
+- $%e\ %B\ %Y$
+
+Rendered to HTML via Pandoc in [`markdown::render_to_html`](src/markdown.rs) with `--mathjax`.
+
+---
+
+## Metadata & RSS
+
+Per‑post Open Graph meta added by [`markdown::add_meta_to_post_html`](src/markdown.rs).  
+Site‑wide RSS `<link rel="alternate"...>` injected by [`rss::add_rss_meta`](src/rss.rs).  
+RSS feed assembled in Build via [`rss_gen`](Cargo.toml) producing `static/feed.xml`.
+
+Each item uses:
+
+- Title: post title
+- Description: truncated body (`truncate_content`)
+- GUID/Link: absolute URL
+- PubDate: UTC midnight of post date
+
+---
+
+## Build Pipeline (Simplified)
+
+1. Walk `src/`
+2. For `.md`: convert -> inject meta -> write `.html`
+3. For `.html`: expand `<REPLACE>` + `<FEED>` -> inject RSS link
+4. Copy other assets
+5. Emit `feed.xml`
+
+Core functions:
+
+- [`markdown::get_mdinfos_for_path`](src/markdown.rs)
+- [`html::generate_substituted_html`](src/html.rs)
+- [`rss::add_rss_meta`](src/rss.rs)
+
+---
+
+## Adding a New Component
+
+1. Create `src/components/card.html`
+2. Use it:
+   ```html
+   <REPLACE with="card.html" />
+   ```
+3. Rebuild.
+
+---
+
+## Creating a Post Without Opening Editor
+
+```bash
+static_site_generator Post "Draft Post" --open-in-editor false .
+```
+
+---
+
+## Requirements
+
+- Rust (edition 2024)
+- Pandoc
+- (Optional) $EDITOR env var for auto-open
+
+---
+
+## Notes / Limitations
+
+- Components not nested (single directory)
+- No incremental rebuild
+- Date time is naive (midnight UTC assigned on RSS export)
+- Basic error handling (uses [`thiserror`](Cargo.toml))
+
+---
+
+## Ideas / Future
+
+- Pagination for feeds
+- Nested component directories
+- Asset hashing
+- Live preview server
+- Tests
+
+---
