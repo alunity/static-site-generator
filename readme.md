@@ -15,11 +15,12 @@ Minimal Rust static site & blog generator with:
 
 ```bash
 cargo install --path .
-static_site_generator Init my_site
+mkdir my_site
+static_site_generator my_site init
 cd my_site
-static_site_generator Post "My First Post" .
+static_site_generator . post "My First Post"
 # edit generated src/posts/YY_MM_DD_my_first_post.md
-static_site_generator Build .
+static_site_generator . build
 # output in ./static
 ```
 
@@ -31,12 +32,12 @@ Ensure `pandoc` is installed and on PATH.
 
 Defined in [src/main.rs](src/main.rs) (`clap`).
 
-Commands (all require a final positional PATH to the project root):
+Commands (all require an initial positional PATH to the project root):
 
 ```
-static_site_generator build [--output-dir <dir>] <path>
-static_site_generator init <path>
-static_site_generator post [--open-in-editor <true|false>] <name> <path>
+static_site_generator <path> build [--output-dir <dir>] 
+static_site_generator <path> init 
+static_site_generator <path> post [--open-in-editor <true|false>] <name> 
 ```
 
 - Build: processes `src/` into a mirrored `static/` (or `--output-dir`)
@@ -64,7 +65,7 @@ src/
   posts/
     YY_MM_DD_example_post.md
     attachments/
-static/ (generated on Build)
+static/ (generated on build)
 ```
 
 ---
@@ -199,7 +200,7 @@ Core functions:
 ## Creating a Post Without Opening Editor
 
 ```bash
-static_site_generator Post "Draft Post" --open-in-editor false .
+static_site_generator . post "Draft Post" --open-in-editor false 
 ```
 
 ---
@@ -223,9 +224,7 @@ static_site_generator Post "Draft Post" --open-in-editor false .
 
 ## Ideas / Future
 
-- Pagination for feeds
 - Nested component directories
-- Asset hashing
 - Live preview server
 - Tests
 

@@ -17,10 +17,10 @@ use pathdiff::diff_paths;
 use rss_gen::{RssData, RssItem, RssVersion, generate_rss};
 
 use crate::{
-    config::{read_config, Config, ConfigError},
-    html::{generate_substituted_html, HtmlError},
+    config::{Config, ConfigError, read_config},
+    html::{HtmlError, generate_substituted_html},
     markdown::{
-        add_meta_to_post_html, get_mdinfos_for_path, render_to_html, truncate_content, MdError
+        MdError, add_meta_to_post_html, get_mdinfos_for_path, render_to_html, truncate_content,
     },
     rss::add_rss_meta,
 };
@@ -74,31 +74,36 @@ pub enum Error {
 
 fn entry() -> Result<()> {
     let cli = Cli::parse();
-    let c = read_config(&cli.path.join("config.json"))?;
 
     match &cli.command {
-        Commands::Build { output_dir } => {
-            if let Some(path) = output_dir {
-                build(&cli.path, &path, &c)?;
-            } else {
-                build(&cli.path, &cli.path.join("static"), &c)?;
-            }
-        }
         Commands::Init => default::create_project(&cli.path).unwrap(),
-        Commands::Post {
-            name,
-            open_in_editor,
-        } => {
-            let md_path = markdown::create_post(name, &c.posts_dir)?;
-            if *open_in_editor {
-                if let Ok(editor) = std::env::var("EDITOR") {
-                    Command::new(editor).arg(&md_path).status().ok();
-                } else {
-                    println!("$EDITOR not set; cannot open file.");
+        _ => {
+            let c = read_config(&cli.path.join("config.json"))?;
+            match &cli.command {
+                Commands::Build { output_dir } => {
+                    if let Some(path) = output_dir {
+                        build(&cli.path, &path, &c)?;
+                    } else {
+                        build(&cli.path, &cli.path.join("static"), &c)?;
+                    }
                 }
-            }
+                Commands::Post {
+                    name,
+                    open_in_editor,
+                } => {
+                    let md_path = markdown::create_post(name, &cli.path.join(&c.posts_dir))?;
+                    if *open_in_editor {
+                        if let Ok(editor) = std::env::var("EDITOR") {
+                            Command::new(editor).arg(&md_path).status().ok();
+                        } else {
+                            println!("$EDITOR not set; cannot open file.");
+                        }
+                    }
+                },
+                _ => unreachable!()
+            };
         }
-    };
+    }
     Ok(())
 }
 
