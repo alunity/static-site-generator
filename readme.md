@@ -34,9 +34,9 @@ Defined in [src/main.rs](src/main.rs) (`clap`).
 Commands (all require a final positional PATH to the project root):
 
 ```
-static_site_generator Build [--output-dir <dir>] <path>
-static_site_generator Init <path>
-static_site_generator Post [--open-in-editor <true|false>] <name> <path>
+static_site_generator build [--output-dir <dir>] <path>
+static_site_generator init <path>
+static_site_generator post [--open-in-editor <true|false>] <name> <path>
 ```
 
 - Build: processes `src/` into a mirrored `static/` (or `--output-dir`)
@@ -49,7 +49,7 @@ Symbols: [`Commands`](src/main.rs), [`markdown::create_post`](src/markdown.rs)
 
 ## Project Layout
 
-After `Init`:
+After `init`:
 
 ```
 config.json
