@@ -1,4 +1,4 @@
-use chrono::prelude::*;
+use chrono::{ParseError, prelude::*};
 use pathdiff::diff_paths;
 use regex::Regex;
 use serde::Deserialize;
@@ -11,11 +11,56 @@ use std::{
     process::Command,
     sync::{Mutex, OnceLock},
 };
+use thiserror::Error;
+
+pub type Result<T> = std::result::Result<T, MdError>;
+
+#[derive(Debug, Deserialize)]
+struct FrontMatter {
+    title: String,
+    date: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct MdInfo {
+    pub date: NaiveDate,
+    pub title: String,
+    pub content: String,
+    pub path: PathBuf,
+}
+
+#[derive(Debug, Error)]
+pub enum MdError {
+    #[error("I/O reading {path}: {source}")]
+    Io {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("Missing or malformed front matter in {path}")]
+    MissingFrontMatter { path: PathBuf },
+
+    #[error("Invalid YAML front matter in {path}: {source}")]
+    InvalidYaml {
+        path: PathBuf,
+        #[source]
+        source: serde_yaml::Error,
+    },
+
+    #[error("Invalid date '{date}' in {path}: {source}")]
+    InvalidDate {
+        path: PathBuf,
+        date: String,
+        #[source]
+        source: ParseError,
+    },
+}
 
 // Simple per-process cache for component files
 static POST_CACHE: OnceLock<Mutex<HashMap<PathBuf, Vec<MdInfo>>>> = OnceLock::new();
 
-pub fn get_mdinfos_for_path(posts_dir: &Path) -> std::io::Result<Vec<MdInfo>> {
+pub fn get_mdinfos_for_path(posts_dir: &Path) -> Result<Vec<MdInfo>> {
     let cache = POST_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     let mut map = cache.lock().unwrap();
 
@@ -32,7 +77,7 @@ pub fn get_mdinfos_for_path(posts_dir: &Path) -> std::io::Result<Vec<MdInfo>> {
             if p.is_dir() {
                 stack.push(p);
             } else if p.extension().unwrap() == "md" {
-                res.push(get_md_info(&p));
+                res.push(get_md_info(&p)?);
             }
         }
     }
@@ -41,7 +86,7 @@ pub fn get_mdinfos_for_path(posts_dir: &Path) -> std::io::Result<Vec<MdInfo>> {
 }
 
 // user input name -> path to dir -> markdown file
-pub fn create_post(post_name: &str, output_dir_path: &Path) -> PathBuf {
+pub fn create_post(post_name: &str, output_dir_path: &Path) -> std::io::Result<PathBuf> {
     let mut file_safe_name = post_name.to_string();
     // Remove non alphanumeric characters and change spaces to underscores
     let separator = '_';
@@ -57,12 +102,12 @@ pub fn create_post(post_name: &str, output_dir_path: &Path) -> PathBuf {
 
     let md_path = output_dir_path.join(format!("{file_safe_date}_{file_safe_name}.md"));
 
-    let mut file = File::create(&md_path).unwrap();
-    writeln!(&mut file, "---").unwrap();
-    writeln!(&mut file, "title: {post_name}").unwrap();
-    writeln!(&mut file, "date: {md_date}").unwrap();
-    writeln!(&mut file, "---").unwrap();
-    md_path
+    let mut file = File::create(&md_path)?;
+    writeln!(&mut file, "---")?;
+    writeln!(&mut file, "title: {post_name}")?;
+    writeln!(&mut file, "date: {md_date}")?;
+    writeln!(&mut file, "---")?;
+    Ok(md_path)
 }
 
 pub fn render_to_html(
@@ -124,42 +169,41 @@ pub fn add_meta_to_post_html(
     )
 }
 
-#[derive(Debug, Deserialize)]
-struct FrontMatter {
-    title: String,
-    date: String,
-}
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct MdInfo {
-    pub date: NaiveDate,
-    pub title: String,
-    pub content: String,
-    pub path: PathBuf,
-}
-
-fn get_md_info(path: &Path) -> MdInfo {
-    let contents = read_to_string(path).unwrap();
+fn get_md_info(path: &Path) -> Result<MdInfo> {
+    let contents = read_to_string(path).map_err(|e| MdError::Io {
+        path: path.into(),
+        source: e,
+    })?;
     let re = Regex::new(r"(?s)\A---\s*\n(.*?)\n---\s*\n?(.*)\z").unwrap();
 
-    let caps = re.captures(&contents).unwrap();
+    let caps = re
+        .captures(&contents)
+        .ok_or_else(|| MdError::MissingFrontMatter { path: path.into() })?;
     let fm_str = caps.get(1).unwrap().as_str();
     let content = caps.get(2).unwrap().as_str();
 
-    let fm: FrontMatter = serde_yaml::from_str(fm_str).unwrap();
-    MdInfo {
+    let fm: FrontMatter = serde_yaml::from_str(fm_str).map_err(|e| MdError::InvalidYaml {
+        path: path.into(),
+        source: e,
+    })?;
+    let date = parse_date(&fm.date).map_err(|e| MdError::InvalidDate {
+        path: path.into(),
+        date: fm.date.clone(),
+        source: e,
+    })?;
+    Ok(MdInfo {
         title: fm.title,
-        date: parse_date(&fm.date),
+        date: date,
         content: content.to_string(),
         path: path.into(),
-    }
+    })
 }
 
-fn parse_date(date_str: &str) -> NaiveDate {
+fn parse_date(date_str: &str) -> std::result::Result<chrono::NaiveDate, ParseError> {
     // Example date: "Tuesday 16 September 2025"
     // Format: weekday full name, space-padded day, month full name, year
     // Chrono format: "%A %e %B %Y"
     NaiveDate::parse_from_str(date_str, "%A %e %B %Y")
         .or_else(|_| NaiveDate::parse_from_str(date_str, "%e %B %Y"))
-        .unwrap() // fallback without weekday
 }

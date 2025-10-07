@@ -39,7 +39,7 @@ pub fn create_project(dir: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
 
     let posts_path = src_path.join("posts");
     create_dir(&posts_path)?;
-    create_post("Example Post", &posts_path);
+    create_post("Example Post", &posts_path).unwrap();
     create_dir(posts_path.join("attachments"))?;
 
     Ok(())

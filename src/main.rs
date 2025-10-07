@@ -1,4 +1,3 @@
-// Implement REPLACE tag on html
 mod config;
 mod default;
 mod html;
@@ -73,7 +72,8 @@ fn main() {
                 name,
                 &cli.path
                     .join(&read_config(&cli.path.join("config.json")).posts_dir),
-            );
+            )
+            .unwrap();
             if let Some(open) = open_in_editor
                 && *open
             {
@@ -109,7 +109,6 @@ fn build(site_dir: &Path, build_dir: &Path) {
             let entry = entry.unwrap();
             let p = entry.path();
 
-            // TODO: Add some blacklist instead of hard coding
             if blacklist.iter().all(|x| x != &p) {
                 if p.is_dir() {
                     stack.push(p);
@@ -119,7 +118,7 @@ fn build(site_dir: &Path, build_dir: &Path) {
 
                     match p.extension().and_then(|s| s.to_str()) {
                         Some("html") => {
-                            generate_substituted_html(&p, &dest, &posts_dir, &components_dir, &c)
+                            generate_substituted_html(&p, &dest, &posts_dir, &components_dir, &c).unwrap();
                         }
                         Some("md") => {
                             let styles_css =
