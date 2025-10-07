@@ -86,7 +86,7 @@ pub fn get_mdinfos_for_path(posts_dir: &Path) -> Result<Vec<MdInfo>> {
 }
 
 // user input name -> path to dir -> markdown file
-pub fn create_post(post_name: &str, output_dir_path: &Path) -> std::io::Result<PathBuf> {
+pub fn create_post(post_name: &str, output_dir_path: &Path) -> Result<PathBuf> {
     let mut file_safe_name = post_name.to_string();
     // Remove non alphanumeric characters and change spaces to underscores
     let separator = '_';
@@ -102,11 +102,11 @@ pub fn create_post(post_name: &str, output_dir_path: &Path) -> std::io::Result<P
 
     let md_path = output_dir_path.join(format!("{file_safe_date}_{file_safe_name}.md"));
 
-    let mut file = File::create(&md_path)?;
-    writeln!(&mut file, "---")?;
-    writeln!(&mut file, "title: {post_name}")?;
-    writeln!(&mut file, "date: {md_date}")?;
-    writeln!(&mut file, "---")?;
+    let mut file = File::create(&md_path).map_err(|e| MdError::Io { path: md_path.to_path_buf(), source: e })?;
+    writeln!(&mut file, "---").map_err(|e| MdError::Io { path: md_path.to_path_buf(), source: e })?;
+    writeln!(&mut file, "title: {post_name}").map_err(|e| MdError::Io { path: md_path.to_path_buf(), source: e })?;
+    writeln!(&mut file, "date: {md_date}").map_err(|e| MdError::Io { path: md_path.to_path_buf(), source: e })?;
+    writeln!(&mut file, "---").map_err(|e| MdError::Io { path: md_path.to_path_buf(), source: e })?;
     Ok(md_path)
 }
 

@@ -1,5 +1,6 @@
 use std::{
     fs::read_to_string,
+    io,
     path::{Path, PathBuf},
 };
 
@@ -30,7 +31,20 @@ impl Default for Config {
     }
 }
 
-pub fn read_config(path: &Path) -> Config {
-    let res: Config = serde_json::from_str(&read_to_string(path).unwrap()).unwrap();
-    res
+pub type Result<T> = std::result::Result<T, ConfigError>;
+
+#[derive(Debug, thiserror::Error)]
+pub enum ConfigError {
+    #[error("Cannot find error {source}")]
+    CannotFindConfig { source: io::Error },
+    #[error("Missing fields {source}")]
+    MissingFields { source: serde_json::Error },
+}
+
+pub fn read_config(path: &Path) -> Result<Config> {
+    let res: Config = serde_json::from_str(
+        &read_to_string(path).map_err(|e| ConfigError::CannotFindConfig { source: e })?,
+    )
+    .map_err(|e| ConfigError::MissingFields { source: e })?;
+    Ok(res)
 }

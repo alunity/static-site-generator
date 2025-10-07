@@ -7,7 +7,6 @@ use std::{
     path::{Path, PathBuf},
     sync::{Mutex, OnceLock},
 };
-use thiserror::Error;
 
 use crate::{
     config::Config,
@@ -15,21 +14,19 @@ use crate::{
     rss::add_rss_meta,
 };
 
-#[derive(Debug, Error)]
-pub enum HTMLError {
-    #[error("Error reading component {path}")]
-    Io {
-        path: PathBuf,
-        #[source]
-        source: std::io::Error,
-    },
-    #[error("MdError {md_error}")]
-    MdInfo { md_error: MdError },
-    #[error("Missing field {tag}")]
+#[derive(Debug, thiserror::Error)]
+pub enum HtmlError {
+    #[error("I/O reading component {path}: {source}")]
+    Io { path: PathBuf, #[source] source: std::io::Error },
+
+    #[error("Missing field '{tag}' in component template")]
     MissingField { tag: String },
+
+    #[error(transparent)]
+    Markdown(#[from] MdError),
 }
 
-pub type Result<T> = std::result::Result<T, HTMLError>;
+pub type Result<T> = std::result::Result<T, HtmlError>;
 
 // Simple per-process cache for component files
 static COMPONENT_CACHE: OnceLock<Mutex<HashMap<PathBuf, String>>> = OnceLock::new();
@@ -41,7 +38,7 @@ fn get_component(path: &Path) -> Result<String> {
     if let Some(s) = map.get(path) {
         return Ok(s.clone());
     }
-    let s = read_to_string(path).map_err(|e| HTMLError::Io {
+    let s = read_to_string(path).map_err(|e| HtmlError::Io {
         path: PathBuf::from(path),
         source: e,
     })?;
@@ -76,7 +73,7 @@ pub fn substitute_replace(contents: &str, components_dir: &Path) -> Result<Strin
 
         let with = caps
             .get(1)
-            .ok_or_else(|| HTMLError::MissingField { tag: "with".into() })?
+            .ok_or_else(|| HtmlError::MissingField { tag: "with".into() })?
             .as_str();
 
         let path = components_dir.join(with);
@@ -98,7 +95,7 @@ fn substitute_feed(
 ) -> Result<String> {
     // Precompute data that is the same for every match
     let mut mdinfos =
-        get_mdinfos_for_path(posts_dir).map_err(|e| HTMLError::MdInfo { md_error: e })?; // was unwrap
+        get_mdinfos_for_path(posts_dir)?; // was unwrap
     mdinfos.sort();
     mdinfos.reverse();
 
@@ -113,7 +110,7 @@ fn substitute_feed(
 
         let with = caps
             .get(1)
-            .ok_or_else(|| HTMLError::MissingField { tag: "with".into() })?;
+            .ok_or_else(|| HtmlError::MissingField { tag: "with".into() })?;
         // .ok_or_else(|| anyhow::anyhow!("expected capture group 1"))?
         // .as_str();
         //

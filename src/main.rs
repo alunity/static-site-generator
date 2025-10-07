@@ -17,9 +17,11 @@ use pathdiff::diff_paths;
 use rss_gen::{RssData, RssItem, RssVersion, generate_rss};
 
 use crate::{
-    config::read_config,
-    html::generate_substituted_html,
-    markdown::{add_meta_to_post_html, get_mdinfos_for_path, render_to_html, truncate_content},
+    config::{read_config, Config, ConfigError},
+    html::{generate_substituted_html, HtmlError},
+    markdown::{
+        add_meta_to_post_html, get_mdinfos_for_path, render_to_html, truncate_content, MdError
+    },
     rss::add_rss_meta,
 };
 
@@ -42,25 +44,44 @@ enum Commands {
         #[arg(short, long)]
         output_dir: Option<PathBuf>,
     },
-    /// Creates new site
+    // / Creates new site
     Init,
     /// Creates new post
     ///
     Post {
         name: String,
-        open_in_editor: Option<bool>,
+
+        #[arg(long, default_value_t = true)]
+        open_in_editor: bool,
     },
 }
 
-fn main() {
+fn main() -> Result<()> {
+    entry()
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error(transparent)]
+    Build(#[from] BuildError),
+    #[error(transparent)]
+    Config(#[from] ConfigError),
+    #[error(transparent)]
+    Md(#[from] MdError),
+}
+
+fn entry() -> Result<()> {
     let cli = Cli::parse();
+    let c = read_config(&cli.path.join("config.json"))?;
 
     match &cli.command {
         Commands::Build { output_dir } => {
             if let Some(path) = output_dir {
-                build(&cli.path, &path);
+                build(&cli.path, &path, &c)?;
             } else {
-                build(&cli.path, &cli.path.join("static"));
+                build(&cli.path, &cli.path.join("static"), &c)?;
             }
         }
         Commands::Init => default::create_project(&cli.path).unwrap(),
@@ -68,15 +89,8 @@ fn main() {
             name,
             open_in_editor,
         } => {
-            let md_path = markdown::create_post(
-                name,
-                &cli.path
-                    .join(&read_config(&cli.path.join("config.json")).posts_dir),
-            )
-            .unwrap();
-            if let Some(open) = open_in_editor
-                && *open
-            {
+            let md_path = markdown::create_post(name, &c.posts_dir)?;
+            if *open_in_editor {
                 if let Ok(editor) = std::env::var("EDITOR") {
                     Command::new(editor).arg(&md_path).status().ok();
                 } else {
@@ -84,11 +98,19 @@ fn main() {
                 }
             }
         }
-    }
+    };
+    Ok(())
 }
 
-fn build(site_dir: &Path, build_dir: &Path) {
-    let c = read_config(&site_dir.join("config.json"));
+#[derive(Debug, thiserror::Error)]
+pub enum BuildError {
+    #[error(transparent)]
+    Md(#[from] MdError),
+    #[error(transparent)]
+    Html(#[from] HtmlError),
+}
+
+fn build(site_dir: &Path, build_dir: &Path, c: &Config) -> std::result::Result<(), BuildError> {
     let posts_dir = site_dir.join(&c.posts_dir);
     let components_dir = site_dir.join(&c.components_dir);
     let styles_css = site_dir.join(&c.styles_css);
@@ -118,7 +140,7 @@ fn build(site_dir: &Path, build_dir: &Path) {
 
                     match p.extension().and_then(|s| s.to_str()) {
                         Some("html") => {
-                            generate_substituted_html(&p, &dest, &posts_dir, &components_dir, &c).unwrap();
+                            generate_substituted_html(&p, &dest, &posts_dir, &components_dir, &c)?;
                         }
                         Some("md") => {
                             let styles_css =
@@ -126,7 +148,7 @@ fn build(site_dir: &Path, build_dir: &Path) {
                             dest.set_extension("html");
                             let html = render_to_html(&p, &dest, Some(&styles_css), None, None);
 
-                            let md_infos = get_mdinfos_for_path(p.parent().unwrap()).unwrap();
+                            let md_infos = get_mdinfos_for_path(p.parent().unwrap())?;
                             let md_info = md_infos.iter().filter(|c| c.path == p).next().unwrap();
 
                             let post_url = c.hosted_url.clone()
@@ -179,4 +201,5 @@ fn build(site_dir: &Path, build_dir: &Path) {
     // gen rss
     //
     write(build_dir.join("feed.xml"), generate_rss(&rss_data).unwrap()).unwrap();
+    Ok(())
 }
