@@ -3,6 +3,7 @@
 Minimal Rust static site & blog generator with:
 
 - Markdown -> HTML via Pandoc (with MathJax support)
+- **No JavaScript**
 - Component inclusion tags
 - Automatic feed page generation
 - Open Graph + RSS metadata
