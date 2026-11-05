@@ -2,7 +2,6 @@ mod config;
 mod default;
 mod html;
 mod markdown;
-mod rss;
 
 use std::{
     fs::{copy, create_dir, create_dir_all, read_dir, remove_dir_all, write},
@@ -10,19 +9,15 @@ use std::{
     process::Command,
 };
 
-use chrono::{DateTime, Utc};
 use clap::{Parser, Subcommand};
 use pathdiff::diff_paths;
-
-use rss_gen::{RssData, RssItem, RssVersion, generate_rss};
 
 use crate::{
     config::{Config, ConfigError, read_config},
     html::{HtmlError, generate_substituted_html},
     markdown::{
-        MdError, add_meta_to_post_html, get_mdinfos_for_path, render_to_html, truncate_content,
+        MdError, add_meta_to_post_html, get_mdinfos_for_path, render_to_html
     },
-    rss::add_rss_meta,
 };
 
 #[derive(Parser)]
@@ -125,11 +120,6 @@ fn build(site_dir: &Path, build_dir: &Path, c: &Config) -> std::result::Result<(
     create_dir(&build_dir).unwrap();
     let blacklist = vec![components_dir.clone()];
 
-    let mut rss_data = RssData::new(Some(RssVersion::RSS2_0))
-        .title(&c.site_name)
-        .link(&c.hosted_url)
-        .description(&c.description);
-
     let mut stack = vec![src_dir.clone()];
     while let Some(path) = stack.pop() {
         for entry in read_dir(path).unwrap() {
@@ -145,7 +135,7 @@ fn build(site_dir: &Path, build_dir: &Path, c: &Config) -> std::result::Result<(
 
                     match p.extension().and_then(|s| s.to_str()) {
                         Some("html") => {
-                            generate_substituted_html(&p, &dest, &posts_dir, &components_dir, &c)?;
+                            generate_substituted_html(&p, &dest, &posts_dir, &components_dir)?;
                         }
                         Some("md") => {
                             let styles_css =
@@ -165,34 +155,15 @@ fn build(site_dir: &Path, build_dir: &Path, c: &Config) -> std::result::Result<(
 
                             write(
                                 dest,
-                                add_rss_meta(
-                                    &add_meta_to_post_html(
+                                    add_meta_to_post_html(
                                         html,
                                         md_info,
                                         &post_url,
                                         &c.og_image_url,
                                         &c.site_name,
                                     ),
-                                    &c.hosted_url,
-                                    &c.site_name,
-                                ),
                             )
                             .unwrap();
-
-                            rss_data.add_item(
-                                RssItem::new()
-                                    .title(&md_info.title)
-                                    .description(truncate_content(&md_info.content, 80))
-                                    .guid(&post_url)
-                                    .pub_date(
-                                        DateTime::<Utc>::from_naive_utc_and_offset(
-                                            md_info.date.and_hms_opt(0, 0, 0).unwrap(),
-                                            Utc,
-                                        )
-                                        .to_rfc2822(),
-                                    )
-                                    .link(&post_url),
-                            );
                         }
                         Some(_) => {
                             copy(&p, &dest).unwrap();
@@ -203,8 +174,5 @@ fn build(site_dir: &Path, build_dir: &Path, c: &Config) -> std::result::Result<(
             }
         }
     }
-    // gen rss
-    //
-    write(build_dir.join("feed.xml"), generate_rss(&rss_data).unwrap()).unwrap();
     Ok(())
 }

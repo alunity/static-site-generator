@@ -9,9 +9,7 @@ use std::{
 };
 
 use crate::{
-    config::Config,
     markdown::{MdError, get_mdinfos_for_path, truncate_content},
-    rss::add_rss_meta,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -51,12 +49,10 @@ pub fn generate_substituted_html(
     dest: &Path,
     posts_dir: &Path,
     components_dir: &Path,
-    config: &Config,
 ) -> Result<()> {
     let mut contents = read_to_string(src).unwrap();
     contents = substitute_replace(&contents, components_dir)?;
     contents = substitute_feed(&contents, src, components_dir, posts_dir)?;
-    contents = add_rss_meta(&contents, &config.hosted_url, &config.site_name);
     write(dest, contents).unwrap();
     Ok(())
 }
